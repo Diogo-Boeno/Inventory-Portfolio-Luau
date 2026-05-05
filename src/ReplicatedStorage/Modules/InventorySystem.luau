@@ -13,11 +13,24 @@ local MainShadow = ScreenUI:WaitForChild('MainShadow')
 local OpenButton = ScreenUI:WaitForChild('Open')
 local Holder = BackGround:WaitForChild('Holder')
 local Slots = Holder:WaitForChild('Slots')
+
+-- Painel de detalhes
 local InfoBG = MainShadow:WaitForChild('InfoBG')
 local Display = InfoBG:WaitForChild('Display')
 local ViewportFrame = Display:WaitForChild('ViewportFrame')
+local ItemName = InfoBG:WaitForChild('ItemName')
+local ItemDescription = InfoBG:WaitForChild('ItemDescription')
 
-local Models = game:GetService('ServerStorage'):FindFirstChild('Items')
+-- Models
+local Models = ReplicatedStorage:FindFirstChild('ItemModels') -- client n consegue acessar
+
+-- Events 
+local Remotes = ReplicatedStorage:WaitForChild('Remotes')
+local UpdateViewportFrameModel = Remotes:FindFirstChild('UpdateViewportFrameModel')
+
+-- Modules
+local Modules = ReplicatedStorage:WaitForChild('Modules')
+local Configs = require(Modules:FindFirstChild('Configs'))
 
 
 local Inventory = {}
@@ -57,7 +70,9 @@ local Values = {
 
 local function updateViewport(modelName)
     for _, child in ipairs(ViewportFrame:GetChildren()) do
-        child:Destroy()
+        if child:IsA('Model') then
+            child:Destroy()
+        end
     end
 
     local model = Models:FindFirstChild(modelName)
@@ -69,13 +84,19 @@ local function updateViewport(modelName)
     local clone = model:Clone()
     clone.Parent = ViewportFrame
 
+    local cf, size = clone:GetBoundingBox()
+    clone:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0, 0, 0)) * CFrame.Angles(math.rad(180), math.rad(180), math.rad(75)))
+
+    cf, size = clone:GetBoundingBox()
+
     local camera = Instance.new('Camera')
     camera.Parent = ViewportFrame
     ViewportFrame.CurrentCamera = camera
 
-    local cf, size = clone:GetBoundingBox()
+    -- Afasta mais a câmera e sobe um pouco
+    local distance = math.max(size.X, size.Y, size.Z) * 0.90
     camera.CFrame = CFrame.new(
-        cf.Position + Vector3.new(0, size.Y * 0.5, size.Z * 2),
+        cf.Position + Vector3.new(0, size.Y * 0.01 - 0.1, distance),
         cf.Position
     )
 end
@@ -100,7 +121,17 @@ function Inventory:LoadSlots()
 end
 
 function Inventory:OnSlotClicked(slot)
+    local data = Configs[slot.Name]
+    if not data then
+        warn('Sem item configurado para o slot: ', slot.Name)
+        return
+    end
+
     print('Slot clicked', slot.Name)
+
+    ItemName.Text = data.Name
+    ItemDescription.Text = data.Description
+    updateViewport(data.Model)
 
     if not BackGround or not MainShadow then return end
 
