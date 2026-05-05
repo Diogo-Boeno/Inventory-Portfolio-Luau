@@ -1,13 +1,22 @@
+-- Configs.luau
+-- /ReplicatedStorage/Modules/Configs.luau
+
 local Configs = {
-    BronzeAxe = {
-        Image = 'rbxassetid://138890925012163',
+    ['1'] = {
+        Name = 'Bronze Axe',
+        Description = 'Bronze',
+        Model = 'BronzeAxe',
     },
-    IronAxe = {
-        Image = 'rbxassetid://138890925012163',
+    ['2'] = {
+        Name = 'Iron Axe',
+        Description = 'Ferro',
+        Model = 'IronAxe',
     },
-    GoldenAxe = {
-        Image = 'rbxassetid://87960543898534',
-    }
+    ['3'] = {
+        Name = 'Golden Axe',
+        Description = 'Ouro',
+        Model = 'GoldenAxe',
+    },
 }
 
 return Configs
