@@ -14,9 +14,18 @@ local OpenButton = ScreenUI:WaitForChild('Open')
 local Modules = ReplicatedStorage:WaitForChild('Modules')
 local InventorySystem = require(Modules:WaitForChild('InventorySystem'))
 
--- Load
+-- Remotes
+local Remotes = ReplicatedStorage:FindFirstChild('Remotes')
+local GetInventory = Remotes:FindFirstChild('GetInventory')
+local ProfileLoaded = Remotes:WaitForChild('ProfileLoaded')
+
+-- load
 local inventory = InventorySystem.new()
-inventory:LoadSlots()
+
+ProfileLoaded.OnClientEvent:Connect(function()
+    local inventoryData = GetInventory:InvokeServer()
+    inventory:LoadSlots(inventoryData)
+end)
 
 -- Functions
 OpenButton.Activated:Connect(function()

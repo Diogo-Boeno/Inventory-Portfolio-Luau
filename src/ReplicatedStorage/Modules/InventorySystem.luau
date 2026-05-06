@@ -107,9 +107,36 @@ function Inventory.new()
     return self
 end
 
-function Inventory:LoadSlots()
+function Inventory:UpdateSlot(slotName, itemData)
+    local slot = Slots:FindFirstChild(slotName)
+    if not slot then return end
+
+    local button = slot:FindFirstChild('Button')
+    if not button then return end
+
+    local icon = button:FindFirstChildWhichIsA('ImageLabel')
+    if not icon then return end
+
+    if itemData then
+        icon.Image = itemData.Icon
+        icon.Visible = true
+    else
+        icon.Image = ''
+        icon.Visible = false
+    end
+end
+
+function Inventory:LoadSlots(inventoryData)
+    self.inventoryData = inventoryData or {}
+
     for i, slot in ipairs(Slots:GetChildren()) do
         if slot:IsA('Frame') then
+
+            if inventoryData and inventoryData[slot.Name] then
+                local itemName = inventoryData[slot.Name]
+                self:UpdateSlot(slot.Name, Configs[itemName])
+            end
+
             local button = slot:FindFirstChild('Button')
             if button then
                 button.Activated:Connect(function()
@@ -121,9 +148,15 @@ function Inventory:LoadSlots()
 end
 
 function Inventory:OnSlotClicked(slot)
-    local data = Configs[slot.Name]
+    local itemName = self.inventoryData and self.inventoryData[slot.Name]
+    if not itemName then
+        warn('Slot Vazio', slot.Name)
+        return
+    end
+
+    local data = Configs[itemName]
     if not data then
-        warn('Sem item configurado para o slot: ', slot.Name)
+        warn('Sem item configurado para o slot: ', itemName)
         return
     end
 
