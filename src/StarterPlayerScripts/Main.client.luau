@@ -15,8 +15,8 @@ local Modules = ReplicatedStorage:WaitForChild('Modules')
 local InventorySystem = require(Modules:WaitForChild('InventorySystem'))
 
 -- Remotes
-local Remotes = ReplicatedStorage:FindFirstChild('Remotes')
-local GetInventory = Remotes:FindFirstChild('GetInventory')
+local Remotes = ReplicatedStorage:WaitForChild('Remotes')
+local GetInventory = Remotes:WaitForChild('GetInventory')
 local ProfileLoaded = Remotes:WaitForChild('ProfileLoaded')
 
 -- load
@@ -29,5 +29,5 @@ end)
 
 -- Functions
 OpenButton.Activated:Connect(function()
-    inventory:OpenUI()
+    inventory:ToggleInventoryUI()
 end)
