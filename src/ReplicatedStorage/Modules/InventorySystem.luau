@@ -68,7 +68,7 @@ local Values = {
     BG_GoalRotation = -3,
 }
 
-local function updateViewport(modelName)
+local function updateViewport(modelName: string)
     for _, child in ipairs(ViewportFrame:GetChildren()) do
         if child:IsA('Model') then
             child:Destroy()
@@ -161,37 +161,39 @@ function Inventory:OnSlotClicked(slot)
     end
 
     print('Slot clicked', slot.Name)
-
+    
     ItemName.Text = data.Name
     ItemDescription.Text = data.Description
     updateViewport(data.Model)
-
+    
+    -- Toggle 
     if not BackGround or not MainShadow then return end
-
+    
     if not self.isDetailOpen then
-        -- Abrindo
-        self.isDetailOpen = true
-
-        TweenService:Create(BackGround, tweenInfo, {
-            Position = Values.BG_GoalPos,
-            Rotation = Values.BG_GoalRotation
-        }):Play()
-        TweenService:Create(MainShadow, tweenInfo, {
-            Position = Values.Shadow_GoalPos,
-            Rotation = Values.Shadow_GoalRotation
-        }):Play()
+        -- Open
+        self:AnimateDetails(true)
+    elseif self.lastSlot == slot.Name then
+        -- Close
+        self:AnimateDetails(false)
     else
-        -- Fechando
-        self.isDetailOpen = false
-        TweenService:Create(BackGround, tweenInfo, {
-            Position = Values.BG_StartingPos,
-            Rotation = Values.BG_StartingRotation
-        }):Play()
-        TweenService:Create(MainShadow, tweenInfo, {
-            Position = Values.Shadow_StartingPos,
-            Rotation = Values.Shadow_StartingRotation
-        }):Play()
+        print('Still')
     end
+
+    self.lastSlot = slot.Name
+end
+
+function Inventory:AnimateDetails(open: boolean)
+    self.isDetailOpen = open
+    local target = open and 'Goal' or 'Starting'
+
+    TweenService:Create(BackGround, tweenInfo, {
+            Position = Values['BG_'.. target ..'Pos'],
+            Rotation = Values['BG_'.. target ..'Rotation']
+    }):Play()
+        TweenService:Create(MainShadow, tweenInfo, {
+            Position = Values['Shadow_'.. target ..'Pos'],
+            Rotation = Values['Shadow_'.. target ..'Rotation']
+    }):Play()
 end
 
 function Inventory.OpenUI()
