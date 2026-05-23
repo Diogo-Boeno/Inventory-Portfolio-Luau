@@ -22,7 +22,7 @@ local ProfileLoaded = Remotes:WaitForChild('ProfileLoaded')
 local InventoryUpdated = Remotes:WaitForChild('InventoryUpdated')
 
 -- load
-local inventory = InventorySystem.new()
+local inventory = InventorySystem.new(ScreenUI)
 
 ProfileLoaded.OnClientEvent:Connect(function()
 	local inventoryData = GetInventory:InvokeServer()

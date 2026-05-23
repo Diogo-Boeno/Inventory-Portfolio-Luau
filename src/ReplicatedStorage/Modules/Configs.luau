@@ -1,6 +1,3 @@
--- Configs.luau
--- /ReplicatedStorage/Modules/Configs.luau
-
 local Configs = {
     ['BronzeAxe'] = {
         Name = 'Bronze Axe',

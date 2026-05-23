@@ -1,38 +1,12 @@
 -- Services
-local Players = game:GetService('Players')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local TweenService = game:GetService('TweenService')
 local RunService = game:GetService('RunService')
-
--- Interface (Local)
-local player = Players.LocalPlayer
-local playerGUI = player:WaitForChild('PlayerGui')
-local ScreenUI = playerGUI:WaitForChild('InventoryUI')
-local BackGround = ScreenUI:WaitForChild('MainBg')
-local MainShadow = ScreenUI:WaitForChild('MainShadow')
-local Holder = BackGround:WaitForChild('Holder')
-local Slots = Holder:WaitForChild('Slots')
-
--- Painel de detalhes
-local InfoBG = MainShadow:WaitForChild('InfoBG')
-local Display = InfoBG:WaitForChild('Display')
-local ViewportFrame = Display:WaitForChild('ViewportFrame')
-local ItemName = InfoBG:WaitForChild('ItemName')
-local ItemDescription = InfoBG:WaitForChild('ItemDescription')
-
--- Câmera Única
-local viewportCamera = Instance.new("Camera")
-viewportCamera.Parent = ViewportFrame
-ViewportFrame.CurrentCamera = viewportCamera
 
 -- Recursos
 local Models = ReplicatedStorage:WaitForChild('ItemModels')
 local Modules = ReplicatedStorage:WaitForChild('Modules')
 local Configs = require(Modules:FindFirstChild('Configs'))
-
--- Remotes
-local Remotes = ReplicatedStorage:WaitForChild('Remotes')
-local DropItem = Remotes:WaitForChild('DropItem')
 
 local Inventory = {}
 Inventory.__index = Inventory
@@ -51,22 +25,64 @@ local Values = {
 	BG_GoalRotation = -3,
 }
 
--- Estado da rotação do viewport
-local rotationConnection = nil
-local currentModel = nil
-
-local function stopRotation()
-	if rotationConnection then
-		rotationConnection:Disconnect()
-		rotationConnection = nil
-	end
-	currentModel = nil
+-- Resolve um filho obrigatório com timeout, falhando com mensagem clara em vez de
+-- travar pra sempre (útil quando a UI montada no UI Labs está incompleta).
+local function need(parent: Instance, childName: string): Instance
+	local child = parent:WaitForChild(childName, 5)
+	assert(
+		child,
+		string.format(
+			"InventorySystem: '%s' não encontrado em '%s'. A raiz precisa ter MainBg/Holder/Slots e MainShadow/InfoBG.",
+			childName,
+			parent.Name
+		)
+	)
+	return child
 end
 
-local function updateViewport(modelName: string)
-	stopRotation()
+-- `root` é o container da UI: a ScreenGui em runtime, ou o `target` do UI Labs.
+function Inventory.new(root: Instance)
+	local self = setmetatable({}, Inventory)
 
-	for _, child in ipairs(ViewportFrame:GetChildren()) do
+	self.root = root
+	self.BackGround = need(root, 'MainBg')
+	self.MainShadow = need(root, 'MainShadow')
+	self.Slots = need(need(self.BackGround, 'Holder'), 'Slots')
+
+	-- Painel de detalhes
+	self.InfoBG = need(self.MainShadow, 'InfoBG')
+	self.Display = need(self.InfoBG, 'Display')
+	self.ViewportFrame = need(self.Display, 'ViewportFrame')
+	self.ItemName = need(self.InfoBG, 'ItemName')
+	self.ItemDescription = need(self.InfoBG, 'ItemDescription')
+
+	-- Câmera dedicada ao viewport desta instância.
+	self.viewportCamera = Instance.new('Camera')
+	self.viewportCamera.Parent = self.ViewportFrame
+	self.ViewportFrame.CurrentCamera = self.viewportCamera
+
+	self.isDetailOpen = false
+	self.lastSlot = nil
+	self.inventoryData = {}
+	self.connected = false
+	self.rotationConnection = nil
+	self.currentModel = nil
+
+	return self
+end
+
+function Inventory:_stopRotation()
+	if self.rotationConnection then
+		self.rotationConnection:Disconnect()
+		self.rotationConnection = nil
+	end
+	self.currentModel = nil
+end
+
+function Inventory:_updateViewport(modelName: string)
+	self:_stopRotation()
+
+	for _, child in ipairs(self.ViewportFrame:GetChildren()) do
 		if child:IsA('Model') then child:Destroy() end
 	end
 
@@ -74,7 +90,7 @@ local function updateViewport(modelName: string)
 	if not model then return warn('Modelo não encontrado:', modelName) end
 
 	local clone = model:Clone()
-	clone.Parent = ViewportFrame
+	clone.Parent = self.ViewportFrame
 
 	local _, size = clone:GetBoundingBox()
 
@@ -85,37 +101,28 @@ local function updateViewport(modelName: string)
 	end
 
 	local distance = math.max(size.X, size.Y, size.Z) * 1
-	viewportCamera.CFrame = CFrame.new(Vector3.new(0, size.Y * 0.1, distance), Vector3.new(0, 0, 0))
+	self.viewportCamera.CFrame = CFrame.new(Vector3.new(0, size.Y * 0.1, distance), Vector3.new(0, 0, 0))
 
-	currentModel = clone
+	self.currentModel = clone
 	local angle = 0
-	rotationConnection = RunService.RenderStepped:Connect(function(dt)
-		if currentModel and currentModel.PrimaryPart then
+	self.rotationConnection = RunService.RenderStepped:Connect(function(dt)
+		if self.currentModel and self.currentModel.PrimaryPart then
 			angle = angle + (90 * dt) -- 90 graus por segundo
-			currentModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(angle), math.rad(-35))) -- -25
+			self.currentModel:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(angle), math.rad(-35)))
 		end
 	end)
-end
-
-function Inventory.new()
-	local self = setmetatable({}, Inventory)
-	self.isDetailOpen = false
-	self.lastSlot = nil
-	self.inventoryData = {}
-	self.connected = false
-	return self
 end
 
 function Inventory:AnimateDetails(open: boolean)
 	self.isDetailOpen = open
 	local target = open and 'Goal' or 'Starting'
 
-	TweenService:Create(BackGround, tweenInfo, {
+	TweenService:Create(self.BackGround, tweenInfo, {
 		Position = Values['BG_'.. target ..'Pos'],
 		Rotation = Values['BG_'.. target ..'Rotation']
 	}):Play()
 
-	TweenService:Create(MainShadow, tweenInfo, {
+	TweenService:Create(self.MainShadow, tweenInfo, {
 		Position = Values['Shadow_'.. target ..'Pos'],
 		Rotation = Values['Shadow_'.. target ..'Rotation']
 	}):Play()
@@ -128,9 +135,9 @@ function Inventory:OnSlotClicked(slot)
 	local data = Configs[itemName]
 	if not data then return end
 
-	ItemName.Text = data.Name
-	ItemDescription.Text = data.Description
-	updateViewport(data.Model)
+	self.ItemName.Text = data.Name
+	self.ItemDescription.Text = data.Description
+	self:_updateViewport(data.Model)
 
 	if not self.isDetailOpen then
 		self:AnimateDetails(true)
@@ -144,26 +151,26 @@ function Inventory:OnSlotClicked(slot)
 end
 
 function Inventory:ToggleInventoryUI()
-	local willBeVisible = not BackGround.Visible
+	local willBeVisible = not self.BackGround.Visible
 
-	BackGround.Visible = willBeVisible
-	MainShadow.Visible = willBeVisible
+	self.BackGround.Visible = willBeVisible
+	self.MainShadow.Visible = willBeVisible
 
 	if not willBeVisible then
-		stopRotation()
+		self:_stopRotation()
 		self.isDetailOpen = false
 		self.lastSlot = nil
-		BackGround.Position = Values.BG_StartingPos
-		BackGround.Rotation = Values.BG_StartingRotation
-		MainShadow.Position = Values.Shadow_StartingPos
-		MainShadow.Rotation = Values.Shadow_StartingRotation
+		self.BackGround.Position = Values.BG_StartingPos
+		self.BackGround.Rotation = Values.BG_StartingRotation
+		self.MainShadow.Position = Values.Shadow_StartingPos
+		self.MainShadow.Rotation = Values.Shadow_StartingRotation
 	end
 end
 
 function Inventory:LoadSlots(inventoryData)
 	self.inventoryData = inventoryData or {}
 
-	for _, slot in ipairs(Slots:GetChildren()) do
+	for _, slot in ipairs(self.Slots:GetChildren()) do
 		if slot:IsA('Frame') then
 			-- Re-renderiza todos os slots: limpa os vazios e preenche os ocupados.
 			local itemName = self.inventoryData[slot.Name]
@@ -193,8 +200,14 @@ end
 function Inventory:DropSelected()
 	if not self.isDetailOpen or not self.lastSlot then return end
 
+	-- Resolve o remote na hora da chamada: no edit mode (UI Labs) não há servidor,
+	-- então o drop apenas não faz nada em vez de quebrar.
+	local remotes = ReplicatedStorage:FindFirstChild('Remotes')
+	local dropRemote = remotes and remotes:FindFirstChild('DropItem')
+	if not dropRemote then return end
+
 	local slotName = self.lastSlot
-	local ok = DropItem:InvokeServer(slotName)
+	local ok = dropRemote:InvokeServer(slotName)
 	if ok then
 		-- A grade se atualiza sozinha via InventoryUpdated; aqui só fechamos o painel.
 		self:AnimateDetails(false)
@@ -203,7 +216,7 @@ function Inventory:DropSelected()
 end
 
 function Inventory:UpdateSlot(slotName, itemData)
-	local slot = Slots:FindFirstChild(slotName)
+	local slot = self.Slots:FindFirstChild(slotName)
 	local icon = slot and slot:FindFirstChild('Button') and slot.Button:FindFirstChildWhichIsA('ImageLabel')
 	if icon and itemData then
 		icon.Image = itemData.Icon
@@ -211,6 +224,10 @@ function Inventory:UpdateSlot(slotName, itemData)
 	elseif icon then
 		icon.Visible = false
 	end
+end
+
+function Inventory:Destroy()
+	self:_stopRotation()
 end
 
 return Inventory
