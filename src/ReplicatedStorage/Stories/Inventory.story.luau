@@ -2,7 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventorySystem = require(ReplicatedStorage.Modules.InventorySystem)
 
 local story = function(target)
-	local template = script.Parent.InventoryUI -- seu ScreenGui guardado
+	local template = script.Parent.InventoryUI
 	local clone = template:Clone()
 
 	for _, child in clone:GetChildren() do
@@ -18,14 +18,12 @@ local story = function(target)
 		["3"] = "GoldenAxe",
 	})
 
-	-- Começa visível pra já dar pra interagir.
-	local mainBg = target:FindFirstChild("MainBg")
+    local mainBg = target:FindFirstChild("MainBg")
 	local mainShadow = target:FindFirstChild("MainShadow")
 	if mainBg then mainBg.Visible = true end
 	if mainShadow then mainShadow.Visible = true end
 
-	-- Botão Open: no jogo isso é ligado no Main.client; aqui ligamos na própria story.
-	local openButton = target:FindFirstChild("Open")
+    local openButton = target:FindFirstChild("Open")
 	if openButton then
 		openButton.Activated:Connect(function()
 			inventory:ToggleInventoryUI()

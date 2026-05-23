@@ -1,8 +1,3 @@
--- WorldItems.luau
--- Cria itens físicos no mundo (clonados de ReplicatedStorage.ItemModels) com um
--- ProximityPrompt e cuida do pickup de forma server-authoritative: a identidade do
--- item vem de um atributo do próprio objeto no mundo, nunca de input do cliente.
-
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local Workspace = game:GetService('Workspace')
 
@@ -24,8 +19,6 @@ local function ensureFolder()
 	return folder
 end
 
--- onPickup recebe (player, itemName) e deve validar + adicionar ao inventário,
--- retornando true se o item foi consumido (aí o objeto do mundo é destruído).
 function WorldItems.init(onPickup)
 	pickupCallback = onPickup
 	worldFolder = ensureFolder()
@@ -73,7 +66,7 @@ function WorldItems.spawn(itemName, cframe)
 	prompt.Parent = host
 
 	prompt.Triggered:Connect(function(player)
-		-- Debounce imediato: evita que dois triggers no mesmo objeto dupliquem o item.
+		-- Debounce imediato: evita que dois triggers no mesmo objeto dupliquem o item
 		prompt.Enabled = false
 
 		local pickedName = model:GetAttribute('ItemName')
@@ -82,7 +75,7 @@ function WorldItems.spawn(itemName, cframe)
 		if consumed then
 			model:Destroy()
 		else
-			-- Inventário cheio (ou falha): devolve o prompt para tentar de novo.
+			-- Inventário cheio (ou falha): devolve o prompt para tentar de novo
 			prompt.Enabled = true
 		end
 	end)

@@ -121,7 +121,6 @@ DropItem.OnServerInvoke = function(player, slotName)
 	inventory[slotName] = nil
 	InventoryUpdated:FireClient(player, inventory)
 
-	-- Materializa o item dropado no mundo, à frente do jogador.
 	local character = player.Character
 	local root = character and character:FindFirstChild('HumanoidRootPart')
 	if root then
@@ -131,11 +130,8 @@ DropItem.OnServerInvoke = function(player, slotName)
 	return true
 end
 
--- World items ----------------------------------------------------------------
-
 WorldItems.init(addItemToInventory)
 
--- Spawner de demonstração: alguns itens fixos para o loop de teste.
 local DEMO_SPAWNS = {
 	{ item = 'BronzeAxe', cframe = CFrame.new(-6, 3, -10) },
 	{ item = 'IronAxe', cframe = CFrame.new(0, 3, -10) },

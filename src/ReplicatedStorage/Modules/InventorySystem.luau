@@ -1,9 +1,7 @@
--- Services
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local TweenService = game:GetService('TweenService')
 local RunService = game:GetService('RunService')
 
--- Recursos
 local Models = ReplicatedStorage:WaitForChild('ItemModels')
 local Modules = ReplicatedStorage:WaitForChild('Modules')
 local Configs = require(Modules:FindFirstChild('Configs'))
@@ -25,8 +23,7 @@ local Values = {
 	BG_GoalRotation = -3,
 }
 
--- Resolve um filho obrigatório com timeout, falhando com mensagem clara em vez de
--- travar pra sempre (útil quando a UI montada no UI Labs está incompleta).
+
 local function need(parent: Instance, childName: string): Instance
 	local child = parent:WaitForChild(childName, 5)
 	assert(
@@ -40,7 +37,6 @@ local function need(parent: Instance, childName: string): Instance
 	return child
 end
 
--- `root` é o container da UI: a ScreenGui em runtime, ou o `target` do UI Labs.
 function Inventory.new(root: Instance)
 	local self = setmetatable({}, Inventory)
 
@@ -49,14 +45,12 @@ function Inventory.new(root: Instance)
 	self.MainShadow = need(root, 'MainShadow')
 	self.Slots = need(need(self.BackGround, 'Holder'), 'Slots')
 
-	-- Painel de detalhes
 	self.InfoBG = need(self.MainShadow, 'InfoBG')
 	self.Display = need(self.InfoBG, 'Display')
 	self.ViewportFrame = need(self.Display, 'ViewportFrame')
 	self.ItemName = need(self.InfoBG, 'ItemName')
 	self.ItemDescription = need(self.InfoBG, 'ItemDescription')
 
-	-- Câmera dedicada ao viewport desta instância.
 	self.viewportCamera = Instance.new('Camera')
 	self.viewportCamera.Parent = self.ViewportFrame
 	self.ViewportFrame.CurrentCamera = self.viewportCamera
@@ -200,8 +194,7 @@ end
 function Inventory:DropSelected()
 	if not self.isDetailOpen or not self.lastSlot then return end
 
-	-- Resolve o remote na hora da chamada: no edit mode (UI Labs) não há servidor,
-	-- então o drop apenas não faz nada em vez de quebrar.
+	-- Resolve o remote na hora da chamada: no edit mode do UI Labs
 	local remotes = ReplicatedStorage:FindFirstChild('Remotes')
 	local dropRemote = remotes and remotes:FindFirstChild('DropItem')
 	if not dropRemote then return end
@@ -209,7 +202,7 @@ function Inventory:DropSelected()
 	local slotName = self.lastSlot
 	local ok = dropRemote:InvokeServer(slotName)
 	if ok then
-		-- A grade se atualiza sozinha via InventoryUpdated; aqui só fechamos o painel.
+		-- A grid se atualiza sozinha via InventoryUpdated; só fecha o painel
 		self:AnimateDetails(false)
 		self.lastSlot = nil
 	end
