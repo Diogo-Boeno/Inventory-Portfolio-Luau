@@ -30,6 +30,10 @@ local Models = ReplicatedStorage:WaitForChild('ItemModels')
 local Modules = ReplicatedStorage:WaitForChild('Modules')
 local Configs = require(Modules:FindFirstChild('Configs'))
 
+-- Remotes
+local Remotes = ReplicatedStorage:WaitForChild('Remotes')
+local DropItem = Remotes:WaitForChild('DropItem')
+
 local Inventory = {}
 Inventory.__index = Inventory
 
@@ -98,6 +102,7 @@ function Inventory.new()
 	self.isDetailOpen = false
 	self.lastSlot = nil
 	self.inventoryData = {}
+	self.connected = false
 	return self
 end
 
@@ -160,17 +165,40 @@ function Inventory:LoadSlots(inventoryData)
 
 	for _, slot in ipairs(Slots:GetChildren()) do
 		if slot:IsA('Frame') then
-			local button = slot:FindFirstChild('Button')
-
+			-- Re-renderiza todos os slots: limpa os vazios e preenche os ocupados.
 			local itemName = self.inventoryData[slot.Name]
-			if itemName then self:UpdateSlot(slot.Name, Configs[itemName]) end
+			self:UpdateSlot(slot.Name, itemName and Configs[itemName] or nil)
 
-			if button then
-				button.Activated:Connect(function()
-					self:OnSlotClicked(slot)
-				end)
+			-- Conecta os botões uma única vez (LoadSlots roda a cada InventoryUpdated).
+			if not self.connected then
+				local button = slot:FindFirstChild('Button')
+				if button then
+					button.Activated:Connect(function()
+						self:OnSlotClicked(slot)
+					end)
+				end
 			end
 		end
+	end
+
+	self.connected = true
+
+	-- Se o item em detalhe foi removido, fecha o painel.
+	if self.isDetailOpen and self.lastSlot and not self.inventoryData[self.lastSlot] then
+		self:AnimateDetails(false)
+		self.lastSlot = nil
+	end
+end
+
+function Inventory:DropSelected()
+	if not self.isDetailOpen or not self.lastSlot then return end
+
+	local slotName = self.lastSlot
+	local ok = DropItem:InvokeServer(slotName)
+	if ok then
+		-- A grade se atualiza sozinha via InventoryUpdated; aqui só fechamos o painel.
+		self:AnimateDetails(false)
+		self.lastSlot = nil
 	end
 end
 
