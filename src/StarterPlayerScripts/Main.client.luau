@@ -29,13 +29,13 @@ ProfileLoaded.OnClientEvent:Connect(function()
 	inventory:LoadSlots(inventoryData)
 end)
 
--- O servidor é a fonte da verdade: sempre que o inventário muda (pegar/dropar),
--- ele empurra o estado novo e a UI se re-renderiza.
 InventoryUpdated.OnClientEvent:Connect(function(inventoryData)
 	inventory:LoadSlots(inventoryData)
 end)
 
 -- Functions
+if ScreenUI and not ScreenUI.Enabled then ScreenUI.Enabled = true end
+
 OpenButton.Activated:Connect(function()
 	inventory:ToggleInventoryUI()
 end)
